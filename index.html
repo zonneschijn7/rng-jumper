@@ -3,17 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RNG JUMPER: V5.9</title>
+    <title>RNG JUMPER: V6.0</title>
     <style>
         :root { --bg: #030712; --player: #06b6d4; --death: #f43f5e; --specter: #8b5cf6; --coin: #f59e0b; --shield: #10b981; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; touch-action: none; }
         
-        /* Mobile-Only Scoped Styles */
+        /* --- Mobile-Only Scoped Styles --- */
         .is-mobile #custom-container { flex-direction: column-reverse; align-items: flex-start; bottom: 10px; left: 10px; }
         .is-mobile #color-menu { width: 250px; max-height: 50vh; margin-bottom: 10px; margin-left: 0; }
         .is-mobile #reset-container { bottom: 10px; right: 10px; }
 
-        /* Standard Styles */
+        /* Scoped Mobile Death Menu Resizing */
+        .is-mobile .overlay { 
+            width: 85%; 
+            min-width: auto; 
+            padding: 15px 20px; 
+            border-radius: 16px;
+        }
+        .is-mobile .overlay h1 { font-size: 1.6rem !important; }
+        .is-mobile #death-stats { font-size: 0.8rem; margin-bottom: 2px; }
+        .is-mobile .coin-display { font-size: 1.1rem !important; margin: 5px 0 !important; }
+        .is-mobile .shop-container { margin-top: 10px; padding-top: 10px; }
+        .is-mobile .upgrade-btn { padding: 8px 12px; margin-bottom: 6px; }
+        .is-mobile .upgrade-info { font-size: 0.75rem; }
+        .is-mobile .cooldown-diff { font-size: 0.6rem; }
+        .is-mobile button.primary { padding: 12px; font-size: 1rem; }
+
+        /* --- Standard PC Styles --- */
         #color-menu::-webkit-scrollbar { width: 6px; }
         #color-menu::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 10px; }
         #color-menu::-webkit-scrollbar-thumb { background: var(--player); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); }
@@ -29,7 +45,7 @@
         .sub-stat { font-size: 0.85rem; color: #06b6d4; font-family: monospace; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px; }
         .overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(3, 7, 18, 0.98); padding: 40px; border-radius: 24px; border: 2px solid var(--death); text-align: center; display: none; z-index: 20; box-shadow: 0 0 50px rgba(244, 63, 94, 0.5); min-width: 420px; pointer-events: auto; }
         
-        @media (max-width: 600px) { .overlay { min-width: 90%; padding: 20px; } .score-big { font-size: 3.5rem; } .stat-card { min-width: auto; padding: 8px 12px; } }
+        @media (max-width: 600px) { .score-big { font-size: 3.5rem; } .stat-card { min-width: auto; padding: 8px 12px; } }
         
         .shop-container { margin-top: 25px; padding-top: 20px; border-top: 1px solid #334155; }
         .upgrade-btn { background: #1e293b; border: 1px solid #334155; color: white; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; display: flex; flex-direction: column; transition: 0.2s; margin-bottom: 10px; outline: none; }
@@ -150,8 +166,7 @@
     function skipLevel() { 
         if(isDead) return;
         for(let i=0; i<10; i++) {
-            progress++;
-            player.targetY -= 160;
+            progress++; player.targetY -= 160;
             if (ghost.visible && ghost.progress < gameData.best) { ghost.progress++; ghost.targetY -= 160; }
             if (progress > gameData.best) {
                 if (ghost.visible) {
@@ -166,19 +181,13 @@
         saveData(); updateUI();
     }
 
-    // MOBILE FIX: Hide reset button when menu open, and stack vertically
     function toggleCustom(btn) { 
         if(btn) btn.blur(); 
         const menu = document.getElementById('color-menu'); 
         const resetBtn = document.getElementById('reset-container');
         const isOpening = menu.style.display !== 'flex';
-        
         menu.style.display = isOpening ? 'flex' : 'none'; 
-        
-        if(isMobile) {
-            resetBtn.style.display = isOpening ? 'none' : 'block';
-        }
-
+        if(isMobile) resetBtn.style.display = isOpening ? 'none' : 'block';
         if(menu.style.display === 'flex') updateColorMenu(); 
     }
 
@@ -252,7 +261,6 @@
         ctx.restore(); requestAnimationFrame(draw);
     }
 
-    // --- Optimized Input Handling ---
     if (isMobile) {
         let meta = document.querySelector('meta[name="viewport"]');
         if (meta) meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
