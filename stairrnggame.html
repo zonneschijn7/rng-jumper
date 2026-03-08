@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RNG JUMPER: V5.7</title>
+    <style>
+        :root { --bg: #030712; --player: #06b6d4; --death: #f43f5e; --specter: #8b5cf6; --coin: #f59e0b; --shield: #10b981; }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+        #color-menu::-webkit-scrollbar { width: 6px; }
+        #color-menu::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 10px; }
+        #color-menu::-webkit-scrollbar-thumb { background: var(--player); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        #color-menu::-webkit-scrollbar-thumb:hover { background: white; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 25px; box-sizing: border-box; z-index: 10; }
+        .clickable { pointer-events: auto !important; }
+        .top-stats { display: flex; justify-content: space-between; align-items: flex-start; }
+        .score-box { text-align: center; flex-grow: 1; }
+        .score-big { font-size: 5rem; font-weight: 900; margin: 0; line-height: 1; color: var(--player); filter: drop-shadow(0 0 15px var(--player)); }
+        .stat-card { background: rgba(15, 23, 42, 0.8); padding: 12px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(8px); min-width: 160px; text-align: center; }
+        .stat-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .stat-value { font-size: 1.1rem; font-weight: 700; color: white; font-family: monospace; }
+        .sub-stat { font-size: 0.85rem; color: #06b6d4; font-family: monospace; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px; }
+        .overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(3, 7, 18, 0.98); padding: 40px; border-radius: 24px; border: 2px solid var(--death); text-align: center; display: none; z-index: 20; box-shadow: 0 0 50px rgba(244, 63, 94, 0.5); min-width: 420px; pointer-events: auto; }
+        .shop-container { margin-top: 25px; padding-top: 20px; border-top: 1px solid #334155; }
+        .upgrade-btn { background: #1e293b; border: 1px solid #334155; color: white; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; display: flex; flex-direction: column; transition: 0.2s; margin-bottom: 10px; outline: none; }
+        .upgrade-btn:hover:not(:disabled) { background: #334155; border-color: var(--player); }
+        .upgrade-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .upgrade-info { display: flex; justify-content: space-between; width: 100%; font-weight: bold; margin-bottom: 4px; }
+        .cooldown-diff { font-size: 0.75rem; color: #94a3b8; font-family: monospace; align-self: flex-start; }
+        .arrow-indicator { color: var(--player); margin: 0 4px; }
+        button.primary { background: var(--player); border: none; padding: 16px 40px; font-weight: 800; cursor: pointer; border-radius: 12px; color: white; transition: 0.2s; width: 100%; font-size: 1.2rem; outline: none; }
+        
+        #custom-container { position: absolute; bottom: 20px; left: 20px; z-index: 100; pointer-events: auto; display: flex; align-items: flex-end; gap: 10px; }
+        #color-menu { background: rgba(15, 23, 42, 0.95); border: 1px solid #334155; padding: 15px; border-radius: 12px; display: none; flex-direction: column; gap: 8px; backdrop-filter: blur(10px); margin-bottom: 10px; max-height: 400px; overflow-y: auto; width: 280px; padding-right: 8px; scrollbar-width: thin; scrollbar-color: var(--player) rgba(15, 23, 42, 0.5); }
+        .menu-section { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin: 10px 0 5px 5px; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+        .color-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #1e293b; padding: 10px 12px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        .color-option:hover { border-color: white; background: #334155; }
+        .preview-box { width: 44px; height: 44px; background: #030712; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #334155; }
+        .trail-canvas { width: 44px; height: 44px; }
+        .color-swatch { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
+        .color-price { font-size: 0.7rem; color: var(--coin); font-weight: bold; min-width: 50px; text-align: right; }
+        .btn-customize { background: #1e293b; border: 2px solid #334155; color: white; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; text-transform: uppercase; outline: none; }
+        
+        #reset-container { position: absolute; bottom: 20px; right: 20px; z-index: 9999; pointer-events: auto; }
+        .dev-reset { background: rgba(244, 63, 94, 0.1); border: 2px solid rgba(244, 63, 94, 0.5); color: #fecaca; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; transition: 0.3s; backdrop-filter: blur(4px); outline: none; }
+        
+        #debug-panel { position: absolute; right: -220px; top: 50%; transform: translateY(-50%); width: 200px; background: rgba(15, 23, 42, 0.9); border: 1px solid #334155; border-right: none; padding: 20px; border-radius: 12px 0 0 12px; backdrop-filter: blur(10px); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; }
+        #debug-panel.open { right: 0; }
+        #debug-tab { position: absolute; left: -30px; top: 50%; transform: translateY(-50%); width: 30px; height: 60px; background: #1e293b; border: 1px solid #334155; border-right: none; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px 0 0 8px; color: #94a3b8; }
+        .debug-btn { background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; cursor: pointer; transition: 0.2s; outline: none; }
+        .debug-btn:hover { background: #1e293b; border-color: var(--player); }
+        .god-active { border-color: #fbbf24 !important; color: #fbbf24 !important; }
+
+        @keyframes danger-pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .danger-text { color: var(--death); font-weight: bold; font-size: 0.7rem; animation: danger-pulse 0.5s infinite; display: none; }
+    </style>
+</head>
+<body>
+
+<div id="custom-container">
+    <div id="color-menu">
+        <div class="menu-section">Colors</div>
+        <div class="color-option" onclick="applyColor('#06b6d4', 0, this)"><div style="display:flex; align-items:center; gap:12px;"><div class="color-swatch" style="background:#06b6d4;"></div> Cyan</div><span class="color-price">OWNED</span></div>
+        <div class="color-option" onclick="applyColor('#f472b6', 250, this)"><div style="display:flex; align-items:center; gap:12px;"><div class="color-swatch" style="background:#f472b6;"></div> Pink</div><span class="color-price" id="price-#f472b6">250C</span></div>
+        <div class="color-option" onclick="applyColor('#fbbf24', 250, this)"><div style="display:flex; align-items:center; gap:12px;"><div class="color-swatch" style="background:#fbbf24;"></div> Gold</div><span class="color-price" id="price-#fbbf24">250C</span></div>
+        <div class="color-option" onclick="applyColor('#a855f7', 250, this)"><div style="display:flex; align-items:center; gap:12px;"><div class="color-swatch" style="background:#a855f7;"></div> Neon</div><span class="color-price" id="price-#a855f7">250C</span></div>
+        <div class="color-option" onclick="applyColor('#10b981', 250, this)"><div style="display:flex; align-items:center; gap:12px;"><div class="color-swatch" style="background:#10b981;"></div> Emerald</div><span class="color-price" id="price-#10b981">250C</span></div>
+        <div class="menu-section">Trails</div>
+        <div class="color-option" onclick="applyTrail('none', 0, this)"><div style="display:flex; align-items:center; gap:12px;"><div class="preview-box"></div> None</div><span class="color-price">OWNED</span></div>
+        <div class="color-option" onclick="applyTrail('dots', 500, this)"><div style="display:flex; align-items:center; gap:12px;"><div class="preview-box"><canvas class="trail-canvas" id="canvas-dots"></canvas></div> Particles</div><span class="color-price" id="tprice-dots">500C</span></div>
+        <div class="color-option" onclick="applyTrail('ghost', 1000, this)"><div style="display:flex; align-items:center; gap:12px;"><div class="preview-box"><canvas class="trail-canvas" id="canvas-ghost"></canvas></div> Afterimage</div><span class="color-price" id="tprice-ghost">1000C</span></div>
+    </div>
+    <button class="btn-customize" onclick="toggleCustom(this)">Customize</button>
+</div>
+
+<div id="debug-panel">
+    <div id="debug-tab" onclick="toggleDebug()">◀</div>
+    <div class="menu-section" style="margin:0">Debug Menu</div>
+    <button id="god-btn" class="debug-btn" onclick="toggleGodMode()">GOD MODE: OFF</button>
+    <button class="debug-btn" onclick="addDebugCoins()">+1,000 COINS</button>
+    <button class="debug-btn" onclick="skipLevel()">SKIP +10%</button>
+</div>
+
+<div id="reset-container"><button class="dev-reset" onclick="purgeAllData(this)">Force Reset System</button></div>
+
+<div id="ui-layer">
+    <div id="shield-indicator" style="display:none; position: absolute; top: 120px; left: 50%; transform: translateX(-50%); color: var(--shield); font-weight: bold; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px var(--shield);">SHIELD ACTIVE</div>
+    <div class="top-stats">
+        <div class="stat-card" style="border-color: var(--specter);"><div class="stat-label">Best Run</div><div id="best-val" class="stat-value">0%</div><div class="sub-stat" style="color:#94a3b8; border:none; font-size:0.6rem">DEATHS: <span id="death-count">0</span></div></div>
+        <div class="score-box"><h1 class="score-big" id="current-val">0%</h1><div id="danger-msg" class="danger-text">CRITICAL RISK</div></div>
+        <div class="stat-card" style="border-color: var(--coin);"><div class="stat-label">Banked Coins</div><div id="total-coins" class="stat-value">0 C</div><div class="sub-stat"><div style="font-size: 0.6rem; color: #94a3b8;">SURVIVAL CHANCE</div><span id="current-chance">100.00%</span></div></div>
+    </div>
+</div>
+
+<div class="overlay" id="death-screen">
+    <h1 style="color:var(--death); margin:0; font-size: 2.5rem;">CRITICAL ERROR</h1>
+    <p id="death-stats" style="color: #cbd5e1; margin-bottom: 5px;"></p>
+    <div class="coin-display" style="color:var(--coin); font-weight:900; font-size:1.5rem; margin:10px 0;"><span id="shop-coins">0</span> C</div>
+    <div class="shop-container">
+        <button id="speed-upgrade" class="upgrade-btn clickable" onclick="buyUpgrade('speed', this)">
+            <div class="upgrade-info"><span>Reflexes (Lvl <span id="speed-lvl">1</span>)</span><span style="color:var(--coin)">Cost: <span id="speed-cost">100</span> C</span></div>
+            <div class="cooldown-diff">Cooldown: <span id="current-cd">450</span>ms <span class="arrow-indicator">→</span> <span id="next-cd" style="color:var(--player)">410</span>ms</div>
+        </button>
+        <button id="shield-upgrade" class="upgrade-btn clickable" onclick="buyUpgrade('shield', this)">
+            <div class="upgrade-info"><span>Shield Generator</span><span style="color:var(--coin)" id="shield-cost-text">Cost: 500 C</span></div>
+            <div class="cooldown-diff">Survival: Negates 1 System Crash</div>
+        </button>
+    </div>
+    <button class="primary clickable" onclick="resetGame(this)">REBOOT SYSTEM</button>
+</div>
+
+<canvas id="game-canvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('game-canvas'), ctx = canvas.getContext('2d'), audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const DEFAULT_DATA = { coins: 0, speedLvl: 1, hasShield: false, best: 0, activeColor: '#06b6d4', unlockedColors: ['#06b6d4'], activeTrail: 'none', unlockedTrails: ['none'], totalDeaths: 0 };
+    let gameData = { ...DEFAULT_DATA }, progress = 0, cameraY = 0, shake = 0, platforms = [], fragments = [], trailParticles = [], shieldAura = 0, isDead = false, sessionBest = 0, godMode = false;
+    
+    const stars = [];
+    const megaStars = [];
+
+    const player = { x: canvas.width / 2 - 40, y: canvas.height - 150, targetY: canvas.height - 150, radius: 22, visible: true, color: "#06b6d4", isJumping: false };
+    const ghost = { x: canvas.width / 2 + 40, y: canvas.height - 150, targetY: canvas.height - 150, radius: 20, visible: false, progress: 0 };
+    
+    function loadData() { const saved = localStorage.getItem('RNG_GAME_V4'); if(saved) gameData = {...DEFAULT_DATA, ...JSON.parse(saved)}; sessionBest = gameData.best; }
+    function saveData() { localStorage.setItem('RNG_GAME_V4', JSON.stringify(gameData)); }
+    function purgeAllData(btn) { if(btn) btn.blur(); if(confirm("Confirming System Wipe. Continue?")) { isDead = true; localStorage.clear(); gameData = { ...DEFAULT_DATA }; sessionBest = 0; saveData(); window.location.replace(window.location.href); } }
+    
+    function toggleDebug() { const p = document.getElementById('debug-panel'); p.classList.toggle('open'); document.getElementById('debug-tab').innerText = p.classList.contains('open') ? "▶" : "◀"; }
+    function toggleGodMode() { godMode = !godMode; const btn = document.getElementById('god-btn'); btn.innerText = godMode ? "GOD MODE: ON" : "GOD MODE: OFF"; btn.classList.toggle('god-active', godMode); }
+    function addDebugCoins() { gameData.coins += 1000; playSound(880, 'sine', 0.1, 0.1); updateUI(); saveData(); }
+    function skipLevel() { 
+        if(isDead) return;
+        for(let i=0; i<10; i++) {
+            progress++;
+            player.targetY -= 160;
+            if (ghost.visible && ghost.progress < gameData.best) { ghost.progress++; ghost.targetY -= 160; }
+            if (progress > gameData.best) {
+                if (ghost.visible) {
+                    ghost.visible = false;
+                    for(let i=0; i<25; i++) fragments.push({ x: ghost.x, y: ghost.y + 20, vx: (Math.random()-0.5)*20, vy: (Math.random()-0.5)*20, r: Math.random()*5+1, life: 0.8, color: "#8b5cf6" });
+                }
+                gameData.best = progress;
+            }
+            const topPlat = platforms[platforms.length - 1]; 
+            platforms.push({ x: canvas.width / 2 - 130, y: topPlat.y - 160, level: topPlat.level + 1 });
+        }
+        saveData(); updateUI();
+    }
+
+    function toggleCustom(btn) { if(btn) btn.blur(); const menu = document.getElementById('color-menu'); menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex'; if(menu.style.display === 'flex') updateColorMenu(); }
+    function applyColor(hex, cost, el) { if(el) el.blur(); if (gameData.unlockedColors.includes(hex)) { gameData.activeColor = hex; player.color = hex; document.documentElement.style.setProperty('--player', hex); playSound(440, 'sine', 0.1, 0.1); } else if (gameData.coins >= cost) { gameData.coins -= cost; gameData.unlockedColors.push(hex); gameData.activeColor = hex; player.color = hex; document.documentElement.style.setProperty('--player', hex); playSound(880, 'sine', 0.2, 0.1); } saveData(); updateUI(); updateColorMenu(); }
+    function applyTrail(type, cost, el) { if(el) el.blur(); if (gameData.unlockedTrails.includes(type)) { gameData.activeTrail = type; playSound(440, 'sine', 0.1, 0.1); } else if (gameData.coins >= cost) { gameData.coins -= cost; gameData.unlockedTrails.push(type); gameData.activeTrail = type; playSound(880, 'sine', 0.2, 0.1); } saveData(); updateUI(); updateColorMenu(); }
+    function updateColorMenu() { gameData.unlockedColors.forEach(color => { const el = document.getElementById(`price-${color}`); if (el) el.innerText = "OWNED"; }); gameData.unlockedTrails.forEach(trail => { const el = document.getElementById(`tprice-${trail}`); if (el) el.innerText = "OWNED"; }); }
+    function getJumpDelay(lvl = gameData.speedLvl) { return Math.max(50, 450 - (lvl * 40)); }
+    function getSpeedCost() { return Math.floor(100 * Math.pow(1.7, gameData.speedLvl - 1)); }
+    function calculateProb(p) { let prob = 1; for(let i=1; i<=p; i++) prob *= (1 - i/100); return prob; }
+    function formatPercent(val) { if (val === 1) return "100.00%"; let p = val * 100; return p < 0.0001 ? p.toExponential(4) + "%" : p.toFixed(4) + "%"; }
+    function playSound(freq, type, duration, vol, slide = false) { if (audioCtx.state === 'suspended') audioCtx.resume(); const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime); if (slide) osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + duration); gain.gain.setValueAtTime(vol, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + duration); }
+    function buyUpgrade(type, btn) { if(btn) btn.blur(); if (type === 'speed') { let cost = getSpeedCost(); if (gameData.coins >= cost && gameData.speedLvl < 10) { gameData.coins -= cost; gameData.speedLvl++; playSound(600, 'sine', 0.2, 0.2); } } else if (type === 'shield') { if (gameData.coins >= 500 && !gameData.hasShield) { gameData.coins -= 500; gameData.hasShield = true; playSound(800, 'sine', 0.3, 0.2); } } saveData(); updateUI(); updateShop(); }
+    function initPlatforms() { platforms = []; for (let i = 0; i < 30; i++) platforms.push({ x: canvas.width / 2 - 130, y: canvas.height - 150 - (i * 160), level: i }); }
+    
+    function jump() { 
+        if (isDead || player.isJumping) return; player.isJumping = true; 
+        const nextLevel = progress + 1, risk = nextLevel / 100, roll = Math.random(); 
+        player.targetY -= 160; playSound(300 + (progress * 10), 'triangle', 0.1, 0.1); 
+        if (ghost.visible && ghost.progress < gameData.best) { ghost.progress++; ghost.targetY -= 160; } 
+        setTimeout(() => { 
+            if (isDead) return; 
+            if (roll < risk && !godMode) { 
+                if (gameData.hasShield) { 
+                    gameData.hasShield = false; saveData(); shake = 10; 
+                    playSound(200, 'sine', 0.4, 0.3, true); 
+                    for(let i=0; i<10; i++) fragments.push({ x: player.x, y: player.y + 20, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, r: 3, life: 0.6, color: "#10b981" }); 
+                    player.targetY += 160; setTimeout(() => { player.isJumping = false; updateUI(); }, 300); 
+                } else triggerDeath(nextLevel); 
+            } else { 
+                progress = nextLevel; gameData.coins += progress; 
+                if (progress > gameData.best) { 
+                    if (ghost.visible) { 
+                        ghost.visible = false; 
+                        for(let i=0; i<25; i++) fragments.push({ x: ghost.x, y: ghost.y + 20, vx: (Math.random()-0.5)*20, vy: (Math.random()-0.5)*20, r: Math.random()*5+1, life: 0.8, color: "#8b5cf6" }); 
+                    } 
+                    gameData.best = progress; 
+                } 
+                saveData(); updateUI(); 
+                const topPlat = platforms[platforms.length - 1]; platforms.push({ x: canvas.width / 2 - 130, y: topPlat.y - 160, level: topPlat.level + 1 }); 
+                player.isJumping = false; 
+            } 
+        }, getJumpDelay()); 
+    }
+
+    function triggerDeath(failedAt) { isDead = true; gameData.totalDeaths++; player.color = "#f43f5e"; shake = 25; playSound(60, 'sawtooth', 0.4, 0.3); saveData(); setTimeout(() => { player.visible = false; for(let i=0; i<25; i++) fragments.push({ x: player.x, y: player.y + 20, vx: (Math.random()-0.5)*20, vy: (Math.random()-0.5)*20, r: Math.random()*6+2, life: 1, color: "#f43f5e" }); updateShop(); document.getElementById('death-screen').style.display = 'block'; document.getElementById('death-stats').innerText = `CRASHED AT ${failedAt}%`; }, 150); }
+    
+    function updateUI() { 
+        const prob = calculateProb(progress);
+        document.getElementById('current-val').innerText = progress + "%"; 
+        document.getElementById('total-coins').innerText = gameData.coins.toLocaleString() + " C"; 
+        document.getElementById('best-val').innerText = gameData.best + "%"; 
+        document.getElementById('death-count').innerText = gameData.totalDeaths;
+        document.getElementById('current-chance').innerText = formatPercent(prob); 
+        document.getElementById('shield-indicator').style.display = gameData.hasShield ? 'block' : 'none'; 
+        document.getElementById('current-val').style.color = isDead ? "#f43f5e" : gameData.activeColor;
+        document.getElementById('danger-msg').style.display = prob < 0.5 ? 'block' : 'none';
+    }
+
+    function updateShop() { document.getElementById('shop-coins').innerText = gameData.coins.toLocaleString(); document.getElementById('speed-lvl').innerText = gameData.speedLvl >= 10 ? "MAX" : gameData.speedLvl; document.getElementById('speed-cost').innerText = gameData.speedLvl >= 10 ? "MAX" : getSpeedCost().toLocaleString(); document.getElementById('current-cd').innerText = getJumpDelay(); document.getElementById('next-cd').innerText = gameData.speedLvl >= 10 ? "MAX" : getJumpDelay(gameData.speedLvl + 1); document.getElementById('speed-upgrade').disabled = gameData.coins < getSpeedCost() || gameData.speedLvl >= 10; document.getElementById('shield-upgrade').disabled = gameData.coins < 500 || gameData.hasShield; document.getElementById('shield-cost-text').innerText = gameData.hasShield ? "ACTIVE" : "Cost: 500 C"; }
+    function resetGame(btn) { if(btn) btn.blur(); loadData(); progress = 0; isDead = false; player.y = canvas.height - 150; player.targetY = canvas.height - 150; player.visible = true; player.isJumping = false; player.color = gameData.activeColor; ghost.y = canvas.height - 150; ghost.targetY = canvas.height - 150; ghost.progress = 0; ghost.visible = gameData.best > 0; fragments = []; trailParticles = []; cameraY = 0; document.getElementById('death-screen').style.display = 'none'; initPlatforms(); updateUI(); }
+    
+    function initStars() { 
+        for (let i = 0; i < 200; i++) { stars.push({ x: Math.random() * canvas.width, y: Math.random() * -canvas.height * 15, r: Math.random() * 2 + 0.5, twinkleSpeed: Math.random() * 0.05 + 0.01, alpha: Math.random(), baseAlpha: Math.random() * 0.5 + 0.1 }); }
+        for (let i = 0; i < 35; i++) { megaStars.push({ x: Math.random() * canvas.width, y: Math.random() * -canvas.height * 18, r: Math.random() * 4 + 2, phase: Math.random() * Math.PI * 2 }); }
+    }
+
+    const previews = { dots: { canvas: null, ctx: null, parts: [] }, ghost: { canvas: null, ctx: null, x: 22, timer: 0, ghosts: [] } };
+    function initPreviews() { ['dots', 'ghost'].forEach(id => { const c = document.getElementById('canvas-' + id); if(c) { previews[id].canvas = c; previews[id].ctx = c.getContext('2d'); c.width = 44; c.height = 44; } }); }
+    function drawPreviews() { let d = previews.dots; if(d.ctx) { d.ctx.clearRect(0, 0, 44, 44); if (Math.random() > 0.7) d.parts.push({ x: 22, y: 22, vx: (Math.random()-0.5)*2.5, vy: (Math.random()-0.5)*2.5, life: 1 }); d.parts.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.life -= 0.04; if (p.life <= 0) d.parts.splice(i, 1); d.ctx.globalAlpha = p.life; d.ctx.fillStyle = gameData.activeColor; d.ctx.beginPath(); d.ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); d.ctx.fill(); }); } let g = previews.ghost; if(g.ctx) { g.ctx.clearRect(0, 0, 44, 44); g.timer += 0.05; g.x = 22 + Math.sin(g.timer * 2) * 12; if (Math.random() > 0.7) g.ghosts.push({ x: g.x, y: 22, life: 0.6 }); g.ghosts.forEach((ghost, i) => { ghost.life -= 0.03; if (ghost.life <= 0) g.ghosts.splice(i, 1); g.ctx.globalAlpha = ghost.life; g.ctx.strokeStyle = gameData.activeColor; g.ctx.lineWidth = 1; g.ctx.beginPath(); g.ctx.arc(ghost.x, ghost.y, 8, 0, Math.PI*2); g.ctx.stroke(); }); g.ctx.globalAlpha = 1; g.ctx.fillStyle = gameData.activeColor; g.ctx.beginPath(); g.ctx.arc(g.x, 22, 8, 0, Math.PI*2); g.ctx.fill(); } requestAnimationFrame(drawPreviews); }
+
+    function draw() {
+        ctx.fillStyle = "#030712"; ctx.fillRect(0, 0, canvas.width, canvas.height); cameraY += ((-player.y + canvas.height * 0.7) - cameraY) * 0.1; 
+        ctx.save();
+        ctx.translate(0, cameraY * 0.2); 
+        stars.forEach(star => { star.alpha += star.twinkleSpeed; if (star.alpha > 1 || star.alpha < 0) star.twinkleSpeed *= -1; ctx.globalAlpha = star.baseAlpha + star.alpha * 0.3; ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(star.x, star.y, star.r / 2, 0, Math.PI * 2); ctx.fill(); });
+        const progressFactor = Math.min(progress / 100, 1);
+        megaStars.forEach(ms => {
+            const pulse = (Math.sin(Date.now() / 600 + ms.phase) + 1) / 2;
+            ctx.globalAlpha = (0.1 + (pulse * 0.9)) * progressFactor;
+            ctx.shadowBlur = (15 + (pulse * 25)) * progressFactor;
+            ctx.shadowColor = "white"; ctx.fillStyle = "white"; ctx.beginPath();
+            ctx.arc(ms.x, ms.y, ms.r * (1 + progressFactor), 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+        });
+        ctx.restore();
+        ctx.save();
+        if (shake > 0) { ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake); shake *= 0.85; }
+        ctx.translate(0, cameraY);
+        platforms.forEach(p => { ctx.fillStyle = "#1e293b"; ctx.beginPath(); ctx.roundRect(p.x, p.y + 45, 260, 16, 8); ctx.fill(); ctx.strokeStyle = p.level <= progress ? gameData.activeColor : "rgba(255,255,255,0.05)"; ctx.stroke(); ctx.fillStyle = "#475569"; ctx.font = "bold 14px Arial"; ctx.fillText(p.level + "%", p.x + 10, p.y + 40); });
+        if (sessionBest > 0) { const bestPlat = platforms.find(p => p.level === sessionBest); if (bestPlat) { ctx.save(); ctx.strokeStyle = gameData.activeColor; ctx.lineWidth = 3; ctx.setLineDash([10, 10]); ctx.shadowBlur = 15; ctx.shadowColor = gameData.activeColor; ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.moveTo(0, bestPlat.y + 45); ctx.lineTo(canvas.width, bestPlat.y + 45); ctx.stroke(); ctx.restore(); } }
+        
+        if (player.visible && !isDead) { if (gameData.activeTrail === 'dots' && Math.random() > 0.5) trailParticles.push({ x: player.x, y: player.y + 20, vx: (Math.random()-0.5)*2, vy: 2, r: Math.random()*3, life: 1, color: gameData.activeColor }); else if (gameData.activeTrail === 'ghost' && Math.random() > 0.8) trailParticles.push({ x: player.x, y: player.y + 20, vx: 0, vy: 0, r: player.radius, life: 0.5, color: gameData.activeColor, ghost: true }); }
+        
+        trailParticles.forEach((t, i) => { t.life -= t.ghost ? 0.02 : 0.03; if (!t.ghost) { t.x += t.vx; t.y += t.vy; } if (t.life <= 0) trailParticles.splice(i, 1); ctx.globalAlpha = Math.max(0, t.life); ctx.fillStyle = t.color; ctx.beginPath(); if (t.ghost) { ctx.strokeStyle = t.color; ctx.lineWidth = 1; ctx.arc(t.x, t.y, t.r, 0, Math.PI*2); ctx.stroke(); } else { ctx.arc(t.x, t.y, t.r, 0, Math.PI*2); ctx.fill(); } });
+        
+        ctx.globalAlpha = 1; 
+        
+        // CRITICAL FIX: Splice dead fragments and ensure globalAlpha resets to 1
+        fragments.forEach((f, i) => { 
+            f.x += f.vx; f.y += f.vy; f.vy += 0.3; f.life -= 0.02; 
+            if (f.life <= 0) {
+                fragments.splice(i, 1); 
+            } else { 
+                ctx.globalAlpha = f.life; 
+                ctx.fillStyle = f.color; 
+                ctx.beginPath(); 
+                ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); 
+                ctx.fill(); 
+            } 
+        });
+        
+        ctx.globalAlpha = 1; // <--- The reset!
+
+        if (ghost.visible) { ghost.y += (ghost.targetY - ghost.y) * 0.1; ctx.strokeStyle = "rgba(139, 92, 246, 0.4)"; ctx.setLineDash([5, 5]); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ghost.x, ghost.y + 20, ghost.radius, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]); }
+        
+        if (player.visible) { player.y += (player.targetY - player.y) * 0.15; if (gameData.hasShield) { shieldAura += 0.05; ctx.strokeStyle = "#10b981"; ctx.lineWidth = 3; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(player.x, player.y + 20, player.radius + 8 + Math.sin(shieldAura)*2, 0, Math.PI*2); ctx.stroke(); } ctx.fillStyle = player.color; const prob = calculateProb(progress); ctx.shadowBlur = prob < 0.5 ? 15 + Math.sin(Date.now()/100)*10 : 15; ctx.shadowColor = player.color; ctx.beginPath(); ctx.arc(player.x, player.y + 20, player.radius, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; }
+        
+        ctx.restore(); requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('mousedown', (e) => { if (e.target.closest('#custom-container') || e.target.closest('#reset-container') || e.target.closest('#death-screen') || e.target.closest('#debug-panel')) return; jump(); });
+    window.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); jump(); } });
+    loadData(); initPlatforms(); initPreviews(); initStars(); player.color = gameData.activeColor; document.documentElement.style.setProperty('--player', gameData.activeColor); updateUI(); draw(); drawPreviews();
+</script>
+</body>
+</html>
