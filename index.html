@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RNG JUMPER: V6.2</title>
+    <title>RNG JUMPER: V6.5</title>
     
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23030712' stroke='%2306b6d4' stroke-width='8'/%3E%3Ccircle cx='50' cy='50' r='20' fill='%2306b6d4'/%3E%3C/svg%3E">
 
@@ -250,14 +250,15 @@
                 ctx.lineTo(canvas.width, bestPlat.y + 45);
                 ctx.stroke();
                 
-                // --- Best Attempt Text (PC ONLY) ---
+                // --- Best Attempt Text (PC ONLY - ABOVE LINE) ---
                 if (!isMobile) {
                     ctx.fillStyle = gameData.activeColor;
                     ctx.font = "bold 14px Arial";
                     ctx.textAlign = "right";
                     ctx.globalAlpha = 1.0;
                     ctx.shadowBlur = 5;
-                    ctx.fillText("BEST ATTEMPT", canvas.width - 20, bestPlat.y + 35);
+                    // Positioned above the line (y+40) and to the left of platform (x-15)
+                    ctx.fillText("BEST ATTEMPT", bestPlat.x - 15, bestPlat.y + 40);
                 }
                 ctx.restore();
             }
